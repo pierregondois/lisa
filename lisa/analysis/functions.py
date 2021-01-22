@@ -156,7 +156,7 @@ class FunctionsAnalysis(TraceAnalysisBase):
             tag_df = tag_df.drop(columns=['__cpu'])
             tag_df = pd.DataFrame(dict(
                 tags=tag_df.apply(pd.Series.to_dict, axis=1),
-                cpu=cpu,
+                __cpu=cpu,
             ))
             tag_df['event'] = _CallGraph._EVENT.TAG
             to_merge.append(tag_df)
@@ -208,15 +208,24 @@ class FunctionsAnalysis(TraceAnalysisBase):
             thread_root_functions=thread_root_functions,
         )
         metrics = _CallGraphNode._METRICS
-        return pd.DataFrame.from_records(
-            (
-                (node.entry_time, node.func_name, FrozenDict(node.tags), node.tagged_name, *(node[metric] for metric in metrics))
-                for node in graph.all_nodes
-                if node.valid_metrics
-            ),
-            columns=['Time', 'function', 'tags', 'tagged_name'] + metrics,
-            index='Time',
-        )
+        df_list = []
+        for cpu, nodes in graph.all_nodes_per_cpu.items():
+            if not nodes:
+                continue
+            df_tmp = pd.DataFrame.from_records(
+                (
+                    (node.entry_time, node.func_name, FrozenDict({k: str(g) for k, g in node.tags.items()}), node.tagged_name, *(node[metric] for metric in metrics))
+                    for node in nodes
+                    if node.valid_metrics
+                ),
+                columns=['Time', 'function', 'tags', 'tagged_name'] + metrics,
+                index='Time',
+            )
+            df_tmp["__cpu"] = cpu
+            df_list.append(df_tmp)
+        df = pd.concat(df_list)
+
+        return df
 
     def compare_with_traces(self, others, **kwargs):
         """
@@ -367,6 +376,13 @@ class _CallGraph:
             node.indirect_children
             for node in self.cpu_nodes.values()
         )
+
+    @property
+    def all_nodes_per_cpu(self):
+        return {
+            cpu: root_node.children
+            for cpu, root_node in self.cpu_nodes.items()
+        }
 
     @classmethod
     def from_df(cls, df, thread_root_functions=None, ts_cols=('calltime', 'rettime')):
@@ -596,7 +612,7 @@ class _CallGraphNode(Mapping):
     def format_name(func_name, tags):
         tags = tags or {}
         tags = ', '.join(
-            f'{tag}={"|".join(vals)}'
+            f'{tag}={"|".join([str(val) for val in vals])}'
             for tag, vals in sorted(tags.items())
         )
         tags = f' ({tags})' if tags else ''
