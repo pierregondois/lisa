@@ -156,7 +156,7 @@ class FunctionsAnalysis(TraceAnalysisBase):
         try:
             capacity_df = self.trace.analysis.load_tracking.df_cpus_signal('capacity')
         except MissingTraceEventError:
-            capacity_df = pd.DataFrame(columns=['__cpu', 'capacity'])
+            capacity_df = pd.DataFrame(columns=['__cpu', 'event', 'capacity'])
         else:
             capacity_df = capacity_df.copy(deep=False)
             capacity_df['__cpu'] = capacity_df['cpu']
@@ -177,7 +177,7 @@ class FunctionsAnalysis(TraceAnalysisBase):
                 columns=['Time', '__cpu', 'event', 'capacity'],
                 index='Time',
             )
-            capacity_df = pd.concat(orig_capacities_df, capacity_df)
+            capacity_df = pd.concat([orig_capacities_df, capacity_df])
 
         to_merge = [entry_df, exit_df, capacity_df]
 
@@ -186,7 +186,7 @@ class FunctionsAnalysis(TraceAnalysisBase):
             tag_df = tag_df.drop(columns=['__cpu'])
             tag_df = pd.DataFrame(dict(
                 tags=tag_df.apply(pd.Series.to_dict, axis=1),
-                cpu=cpu,
+                __cpu=cpu,
             ))
             tag_df['event'] = _CallGraph._EVENT.SET_TAG
             to_merge.append(tag_df)
@@ -257,7 +257,7 @@ class FunctionsAnalysis(TraceAnalysisBase):
         return pd.DataFrame.from_records(
             (
                 (
-                    node.entry_time, node.cpu, node.func_name, FrozenDict(node.tags), node.tagged_name,
+                    node.entry_time, node.cpu, node.func_name,  FrozenDict({k: str(g) for k, g in node.tags.items()}), node.tagged_name,
                     *(
                         get_metric(node, metric)
                         for metric in metrics
@@ -265,7 +265,7 @@ class FunctionsAnalysis(TraceAnalysisBase):
                 )
                 for node in graph.all_nodes
             ),
-            columns=['Time', 'cpu', 'function', 'tags', 'tagged_name'] + metrics,
+            columns=['Time', '__cpu', 'function', 'tags', 'tagged_name'] + metrics,
             index='Time',
         )
 
@@ -617,7 +617,7 @@ class _CallGraphNode(Mapping):
         'self_time',
     ))
 
-    def __init__(self, func_name, parent, logical_thread, cpu, cpu_capacity, entry_time=None, exit_time=None, valid_metrics=True):
+    def __init__(self, func_name, parent, logical_thread, cpu, cpu_capacity, entry_time=0, exit_time=0, valid_metrics=True):
         self.func_name = func_name
         self.cpu = cpu
         self.cpu_capacity = cpu_capacity
@@ -699,7 +699,7 @@ class _CallGraphNode(Mapping):
     def format_name(func_name, tags):
         tags = tags or {}
         tags = ', '.join(
-            f'{tag}={"|".join(vals)}'
+            f'{tag}={"|".join([str(val) for val in vals])}'
             for tag, vals in sorted(tags.items())
         )
         tags = f' ({tags})' if tags else ''
