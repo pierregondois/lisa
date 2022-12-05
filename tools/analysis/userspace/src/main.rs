@@ -1,14 +1,3 @@
-// #![feature(future_join)]
-#![feature(generators)]
-#![feature(stmt_expr_attributes)]
-#![feature(proc_macro_hygiene)]
-#![feature(type_alias_impl_trait)]
-#![feature(btree_drain_filter)]
-#![feature(core_intrinsics)]
-#![feature(never_type)]
-#![feature(try_blocks)]
-#![feature(macro_metavar_expr)]
-
 // The musl libc allocator is pretty slow, switching to mimalloc or jemalloc
 // makes the resulting binary significantly faster, as we allocate pretty
 // heavily when parsing JSON. mimalloc crate compiles much more quickly though.
@@ -18,17 +7,12 @@ use mimalloc::MiMalloc;
 #[cfg(target_arch = "x86_64")]
 static GLOBAL: MiMalloc = MiMalloc;
 
-use ::futures::{future::join_all, pin_mut};
-use clap::Parser;
 use core::{
     fmt::Debug,
     future::Future,
     iter::zip,
     task::{Context, Poll},
 };
-
-use memmap::Mmap;
-use serde_json::Deserializer;
 use std::{
     collections::BTreeMap,
     fs::File,
@@ -36,21 +20,16 @@ use std::{
     path::PathBuf,
 };
 
-use serde::{Deserialize, Serialize};
-use serde_json::value::Value;
-
-mod analysis;
-mod arrow;
-mod event;
-mod eventreq;
-mod futures;
-mod string;
-
-use crate::{
+use ::futures::{future::join_all, pin_mut};
+use analysis::{
     analysis::{get_analyses, AnalysisConf, EventWindow, HasKDim, TraceEventStream, WindowUpdate},
     event::{Event, EventData, EventID},
     futures::make_noop_waker,
 };
+use clap::Parser;
+use memmap2::Mmap;
+use serde::{Deserialize, Serialize};
+use serde_json::{value::Value, Deserializer};
 
 #[derive(clap::Parser, Debug)]
 struct Cli {

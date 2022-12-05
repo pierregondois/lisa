@@ -3,9 +3,9 @@ use core::{
     fmt::Display,
     ops::{Deref, DerefMut},
 };
-use serde::{Deserialize, Serialize};
 
 use schemars::{gen::SchemaGenerator, schema::Schema, JsonSchema};
+use serde::{Deserialize, Serialize};
 
 // type StringImplem = std::string::String;
 type StringImplem = smartstring::alias::String;

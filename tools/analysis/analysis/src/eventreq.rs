@@ -1,5 +1,6 @@
-use serde::Serialize;
 use std::fmt;
+
+use serde::Serialize;
 
 #[derive(Clone, Debug, Serialize)]
 pub enum EventReq {

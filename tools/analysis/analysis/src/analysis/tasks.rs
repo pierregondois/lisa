@@ -1,25 +1,21 @@
 use core::fmt::Debug;
 use std::fmt::Write;
 
+use ::macro_rules_attribute::apply;
+use arrow2_convert::ArrowField;
 use futures::stream::Stream;
 use futures_async_stream::{for_await, stream};
-
+pub(crate) use make_table_struct;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use arrow2_convert::ArrowField;
-
 use crate::{
+    analysis,
     analysis::{AnalysisResult, EventStream, SignalUpdate},
     const_event_req,
     event::{Comm, Event, EventData, Freq, Timestamp, CPU, PID},
     string::String,
 };
-
-use ::macro_rules_attribute::apply;
-
-use crate::analysis;
-pub(crate) use make_table_struct;
 
 #[stream(item = SignalUpdate<CPU, Freq>)]
 async fn cpufreq(x: &Event) {
@@ -417,7 +413,6 @@ macro_rules! row_enum {
         // All the attributes applied below variant_structs will be applied to
         // each variant struct generated as well.
         #[apply(variant_structs)]
-
         #[derive(Clone, Eq, PartialEq, Debug, Serialize, Deserialize, JsonSchema, ArrowField)]
         // We use type = "sparse" because type = "dense" is broken currently:
         // https://github.com/DataEngineeringLabs/arrow2-convert/issues/86

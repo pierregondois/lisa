@@ -1,7 +1,5 @@
 use std::{fs::File, path::Path};
 
-use futures::{stream::Stream, StreamExt as FuturesStreamExt};
-
 use arrow2::{
     array::{Array, TryPush},
     chunk::Chunk,
@@ -9,11 +7,11 @@ use arrow2::{
     error::Result,
     io::ipc::write,
 };
-
 use arrow2_convert::{
     field::ArrowField,
     serialize::{ArrowSerialize, TryIntoArrow},
 };
+use futures::{stream::Stream, StreamExt as FuturesStreamExt};
 
 use crate::string::String;
 
@@ -121,7 +119,10 @@ where
     let schema = get_schema::<S::Item>();
     // LZ4 is fast enough to not be noticible (or at least fast enough to make
     // up for the lost time in I/O speed).
+    // However, it is not yet available for WASM:
+    // https://github.com/jorgecarleitao/arrow2/issues/986
     let compression = Some(write::Compression::LZ4);
+    // let compression = None;
     let options = write::WriteOptions { compression };
     let mut writer = write::FileWriter::new(file, schema, None, options);
 

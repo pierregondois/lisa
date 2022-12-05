@@ -7,9 +7,7 @@ use core::{
 use schemars::JsonSchema;
 use serde::{de, Deserialize, Serialize};
 
-use crate::string::String;
-
-use crate::arrow::newtype_impl_arrow_field;
+use crate::{arrow::newtype_impl_arrow_field, string::String};
 
 newtype_impl_arrow_field!(Comm, String);
 newtype_impl_arrow_field!(Freq, u32);

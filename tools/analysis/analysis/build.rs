@@ -51,6 +51,6 @@ fn main() -> Result<(), String> {
     // let content = format!("build_analyses_descriptors!{{ {} }}", funcs.join(", "));
     let content = format!("build_analyses_descriptors!{{ {} }}", funcs.join(", "));
     // println!("generated: {}", content);
-    fs::write(&dest_path, content).unwrap();
+    fs::write(dest_path, content).unwrap();
     Ok(())
 }
