@@ -268,7 +268,6 @@ class TasksAnalysis(TraceAnalysisBase):
 
         return rt_tasks
 
-    @TraceAnalysisBase.cache
     @rust_analysis(analyses=['tasks::tasks_states'])
     async def _df_tasks_states(self, tasks=None, return_one_df=False):
         """
