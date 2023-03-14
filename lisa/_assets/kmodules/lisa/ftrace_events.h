@@ -14,6 +14,9 @@
 #include <linux/version.h>
 #include <linux/tracepoint.h>
 #include <linux/version.h>
+#include <linux/socket.h>
+#include <linux/in.h>
+#include <linux/in6.h>
 
 #include "sched_helpers.h"
 
@@ -438,6 +441,75 @@ TRACE_EVENT(lisa__pixel6_emeter,
 
 	TP_printk("ts=%lu device=%u chan=%u chan_name=%s value=%lu",
 		  __entry->ts, __entry->device, __entry->chan, __entry->chan_name, __entry->value)
+);
+
+
+#ifndef MY_ENUM_DEF
+#define MY_ENUM_DEF
+enum my_enum {
+	MY_ENUM_VARIANT1,
+	MY_ENUM_VARIANT2,
+};
+#endif
+
+TRACE_EVENT(lisa__test_fmt,
+	TP_PROTO(u64 x, u64 y, const char *str),
+	TP_ARGS(x, y, str),
+
+	TP_STRUCT__entry(
+		__field(const char*, cptr)
+		__array(void *, top, 4)
+		__dynamic_array(u8, mydyn, 100)
+		__sockaddr(myaddr, sizeof(struct sockaddr_in))
+		/* __array(enum my_enum, top, (16)/4) */
+		/* __field(pid_t, mypid) */
+		/* __field(int*, sptr) */
+		/* __field(unsigned int*, uptr) */
+	),
+
+	TP_fast_assign(
+		__entry->top[0] = (void*)0;
+		__entry->top[1] = (void*)1;
+		__entry->top[2] = (void*)2;
+		__entry->top[3] = (void*)3;
+		__entry->cptr = str;
+		memcpy(__get_dynamic_array(mydyn), "dynamic content", 16);
+
+		struct sockaddr_in myaddr;
+		struct in_addr myinaddr;
+		myinaddr.s_addr = 16777343;
+		myaddr.sin_family = AF_INET;
+		myaddr.sin_port = 0x2a00;
+		myaddr.sin_addr = myinaddr;
+		__assign_sockaddr(myaddr, &myaddr, sizeof(myaddr));
+
+		/* __entry->cptr = (const char*)18446603336386032320; */
+		/* __entry->top[(16)/4 - 1] = MY_ENUM_VARIANT2; */
+	),
+
+	/* TP_printk("x=%lu", (unsigned long)*__entry->cptr) */
+	/* TP_printk("x=%s y=%u plus=%+d buffer=%*phD mydyn=%s", __entry->cptr, (unsigned int)(unsigned char)-1, 42, 5, __entry->cptr, __get_dynamic_array(mydyn)) */
+	TP_printk(
+	    /* "x=%s y=%u plus=%+d buffer=%*phD mydyn=%s array=%s hex_array=%s hex_str_array=%s symbolic=%s symbolic2=%s symbolic3=%s", */
+	    /* "buffer=%*phD mydyn=%s array=%s hex_array=%s hex_str_array=%s symbolic=%s symbolic2=%s symbolic3=%s hexdump=%s hexdump2=%s secs=%llu without=%u", */
+	    "myaddr=%pIS",
+	    /* __get_str(mydyn), */
+	    /* (unsigned int)(unsigned char)-1, */
+	    /* 16, */
+	    /* 10, __get_dynamic_array(mydyn), */
+	    /* __get_dynamic_array(mydyn), */
+	    /* __print_array(__get_dynamic_array(mydyn), 16, 1), */
+	    /* __print_hex(__get_dynamic_array(mydyn), 16), */
+	    /* __print_hex_str(__get_dynamic_array(mydyn), 16), */
+	    /* __print_symbolic_u64((u64)__entry->top[0], {0, "thezero"}, {1, "one"}), */
+	    /* __print_symbolic_u64((u64)__entry->top[2], {1, "one"}), */
+	    /* __print_flags(255, "|", {1, "one"}, {2, "two"}, {4, "four"}), */
+	    /* __print_hex_dump("prefix", 1, 16, 1, __get_dynamic_array(mydyn), 16, true), */
+	    /* __print_hex_dump(0, 0, 4, 1, __get_dynamic_array(mydyn), 16, true), */
+	    /* __print_ns_to_secs(2000000001ULL), */
+	    /* __print_ns_without_secs(2000000001ULL) */
+	    __get_sockaddr(myaddr)
+	)
 );
 
 #endif /* _FTRACE_EVENTS_H */

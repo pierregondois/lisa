@@ -71,3 +71,77 @@ module_init(modinit);
 module_exit(modexit);
 
 MODULE_LICENSE("GPL");
+
+#include <linux/jiffies.h>
+#include <linux/slab.h>
+#include <linux/fs.h>
+#include <linux/types.h>
+
+#include "ftrace_events.h"
+#include "wq.h"
+
+struct test_data {
+	struct work_item *work;
+};
+
+static int free_test_data(struct test_data *data) {
+	int ret = 0;
+	if (data) {
+		ret |= destroy_work(data->work);
+		kfree(data);
+	}
+	return ret;
+}
+
+static int test_worker(void *data) {
+	int array[] = {1,2,3,4,5,6,7,8,9};
+	guid_t guid = GUID_INIT(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11);
+	pr_err("tracing event ...\n");
+	trace_printk("mytprintk0");
+	trace_printk("mytprintk1 %u %llu %s %u %s %x %pS %pB %pUb", 42, 43ull, "a string", 44, "another string", 45, __trace_printk, &__trace_printk, &guid);
+	trace_printk("mytprintk2 A%04dB", 52);
+	trace_printk("mytprintk3 A%-+12.10dB", 53);
+	trace_printk("mytprintk4 A%+010dB", 54);
+	trace_printk("mytprintk5 A%#20xB", 55);
+	trace_printk("mytprintk6 A%0#20xB", 56);
+	trace_printk("mytprintk7 A%+12.10dB", 57);
+	trace_printk("mytprintk8 A%+10.12dB", 58);
+	trace_printk("mytprintk9  A%-+10.15dB", -59);
+	trace_printk("mytprintk10 A%-+*.*dB", 10, 15, -59);
+	trace_printk("mytprintk11 A%*.*dB", 10, 15, -59);
+
+	trace_lisa__test_fmt(43, 44, tracepoint_string("hello world"));
+	return WORKER_SAME_DELAY;
+}
+
+static int enable_event_test(struct feature* feature) {
+	int ret = 0;
+	struct test_data *data = NULL;
+	if (ENABLE_FEATURE(__worqueue))
+		return 1;
+
+	data = kzalloc(sizeof(*data), GFP_KERNEL);
+	feature->data = data;
+	if (!data)
+		return 2;
+
+	data->work = start_work(test_worker, msecs_to_jiffies(100), feature);
+	if (!data->work)
+		ret |= 1;
+
+	return ret;
+};
+
+static int disable_event_test(struct feature* feature) {
+	int ret = 0;
+	struct test_data *data = feature->data;
+
+	if (data)
+		free_test_data(data);
+
+	ret |= DISABLE_FEATURE(__worqueue);
+
+	return ret;
+};
+
+DEFINE_FEATURE(event__lisa__test_fmt, enable_event_test, disable_event_test);
