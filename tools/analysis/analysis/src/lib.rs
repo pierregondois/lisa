@@ -8,6 +8,8 @@
 #![feature(never_type)]
 #![feature(try_blocks)]
 #![feature(macro_metavar_expr)]
+#![feature(coroutines)]
+
 
 pub mod analysis;
 pub mod arrow;
